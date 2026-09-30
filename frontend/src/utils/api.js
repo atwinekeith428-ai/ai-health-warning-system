@@ -1,5 +1,13 @@
-// Use environment variable in production, fall back to localhost for dev
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+// Detect environment: use Vercel URL when deployed, localhost when developing
+const isLocalhost = 
+  typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+const API_BASE = isLocalhost
+  ? 'http://127.0.0.1:8000'
+  : 'https://ai-health-backend-1ebp.onrender.com';
+
+console.log('🔗 API Base URL:', API_BASE);
 
 export const api = {
   async getAllRecords() {
