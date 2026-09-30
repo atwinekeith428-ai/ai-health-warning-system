@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../utils/api';
 
 export default function Reports() {
   const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('healthRecords');
-    if (stored) setRecords(JSON.parse(stored));
+    load();
   }, []);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getAllRecords();
+      setRecords(data);
+    } catch (err) {
+      console.error('Failed to load records:', err);
+      setRecords([]);
+    }
+    setLoading(false);
+  };
 
   const total = records.length;
   const maternal = records.filter(r => r.type === 'Maternal').length;
@@ -40,15 +53,14 @@ export default function Reports() {
 
   const maxWeekly = Math.max(...weekly.map(w => w.count), 1);
 
-  // --- Top high-risk patients (unique by name, most recent first) ---
+  // --- High risk patients ---
   const highRiskPatients = records
     .filter(r => r.level.toLowerCase().includes('high'))
     .slice(0, 5);
 
-  // --- Recent activity (last 5 records) ---
+  // --- Recent activity ---
   const recentActivity = records.slice(0, 5);
 
-  // --- Bar Chart Component ---
   const Bar = ({ label, value, color }) => (
     <div className="mb-4">
       <div className="flex justify-between text-sm mb-1">
@@ -61,6 +73,20 @@ export default function Reports() {
     </div>
   );
 
+  if (loading) {
+    return (
+      <>
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-800">📊 Reports & Analytics</h1>
+          <p className="text-sm text-slate-600">Statistical overview of all assessments and patient activity.</p>
+        </header>
+        <div className="bg-white p-12 rounded-xl text-center text-gray-500">
+          Loading records...
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <header className="mb-6">
@@ -69,7 +95,7 @@ export default function Reports() {
       </header>
 
       {/* Top KPI Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <p className="text-sm text-gray-500">Total Assessments</p>
           <p className="text-4xl font-bold text-slate-800 mt-2">{total}</p>
@@ -92,9 +118,8 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Weekly Activity + Risk Distribution */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
-        {/* Weekly Activity Chart */}
+      {/* Weekly + Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-slate-800">📈 Weekly Activity</h2>
@@ -121,7 +146,6 @@ export default function Reports() {
           )}
         </div>
 
-        {/* Risk Distribution */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h2 className="text-lg font-bold text-slate-800 mb-4">🎯 Risk Distribution</h2>
           <Bar label="High Risk" value={high} color="bg-red-500" />
@@ -137,9 +161,8 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* High-Risk Patients + Recent Activity */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* High-Risk Patients */}
+      {/* High risk + recent */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-slate-800">⚠️ High-Risk Patients</h2>
@@ -174,7 +197,6 @@ export default function Reports() {
           )}
         </div>
 
-        {/* Recent Activity */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-slate-800">🕒 Recent Activity</h2>
