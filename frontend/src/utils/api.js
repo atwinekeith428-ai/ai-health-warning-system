@@ -1,7 +1,10 @@
-// Detect environment: use Vercel URL when deployed, localhost when developing
-const isLocalhost = 
-  typeof window !== 'undefined' && 
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+// Auto-detect environment based on the browser's hostname
+// Local dev  → http://127.0.0.1:8000
+// Any deployed URL → Render backend
+const isLocalhost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+   window.location.hostname === '127.0.0.1');
 
 const API_BASE = isLocalhost
   ? 'http://127.0.0.1:8000'
