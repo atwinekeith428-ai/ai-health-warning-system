@@ -6,11 +6,10 @@ import joblib
 import pandas as pd
 import json
 
-from database import init_db, get_db, PatientRecord
+from database import init_db, get_db, PatientRecord, generate_patient_id
 
 app = FastAPI()
 
-# Allow React frontend to talk to this backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,15 +18,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create database tables on startup
 init_db()
 
-# Load the trained AI model and label encoder
 model = joblib.load('maternal_risk_model.pkl')
 label_encoder = joblib.load('label_encoder.pkl')
 
 
-# ---------- Pydantic Models ----------
 class MaternalData(BaseModel):
     age: int
     systolic_bp: int
@@ -63,7 +59,22 @@ class RecordUpdate(BaseModel):
     notes: str = None
 
 
-# ---------- Maternal AI Prediction (test endpoint) ----------
+def serialize(r):
+    return {
+        "id": r.id,
+        "patient_id": r.patient_id,
+        "type": r.type,
+        "name": r.name,
+        "mother_name": r.mother_name,
+        "level": r.level,
+        "date": r.date,
+        "vitals": json.loads(r.vitals) if r.vitals else {},
+        "risk_factors": json.loads(r.risk_factors) if r.risk_factors else [],
+        "recommended_action": r.recommended_action,
+        "notes": r.notes,
+    }
+
+
 @app.post("/api/predict/maternal")
 def predict_maternal(data: MaternalData):
     input_data = pd.DataFrame([[
@@ -74,12 +85,6 @@ def predict_maternal(data: MaternalData):
     prediction_encoded = model.predict(input_data)[0]
     probabilities = model.predict_proba(input_data)[0]
     classes = label_encoder.classes_
-
-    print(f"\n--- New Maternal Assessment ---")
-    print(f"Input: {data.dict()}")
-    print(f"Prediction: {label_encoder.inverse_transform([prediction_encoded])[0]}")
-    print(f"Confidence: {dict(zip(classes, probabilities.round(3)))}")
-
     risk_level = label_encoder.inverse_transform([prediction_encoded])[0]
 
     risk_factors = []
@@ -111,10 +116,8 @@ def predict_maternal(data: MaternalData):
     }
 
 
-# ---------- Save Maternal Record ----------
 @app.post("/api/records/maternal")
 def create_maternal_record(data: MaternalRecordCreate, db: Session = Depends(get_db)):
-    # Run prediction
     input_data = pd.DataFrame([[
         data.age, data.systolic_bp, data.diastolic_bp,
         data.bs, data.body_temp, data.heart_rate
@@ -123,7 +126,6 @@ def create_maternal_record(data: MaternalRecordCreate, db: Session = Depends(get
     prediction_encoded = model.predict(input_data)[0]
     risk_level = label_encoder.inverse_transform([prediction_encoded])[0]
 
-    # Risk factors
     risk_factors = []
     if data.systolic_bp >= 140 or data.diastolic_bp >= 90:
         risk_factors.append(f"High blood pressure ({data.systolic_bp}/{data.diastolic_bp} mmHg)")
@@ -145,8 +147,10 @@ def create_maternal_record(data: MaternalRecordCreate, db: Session = Depends(get
     else:
         action = "Continue routine monitoring. No immediate action required."
 
-    # Save to database
+    patient_id = generate_patient_id(db, "Maternal")
+
     record = PatientRecord(
+        patient_id=patient_id,
         type="Maternal",
         name=data.patient_name,
         level=risk_level.title(),
@@ -168,13 +172,13 @@ def create_maternal_record(data: MaternalRecordCreate, db: Session = Depends(get
 
     return {
         "id": record.id,
+        "patient_id": patient_id,
         "risk_level": risk_level.title(),
         "risk_factors": risk_factors if risk_factors else ["No major risk factors detected."],
         "recommended_action": action
     }
 
 
-# ---------- Save Newborn Record (rule-based) ----------
 @app.post("/api/records/newborn")
 def create_newborn_record(data: NewbornRecordCreate, db: Session = Depends(get_db)):
     factors = []
@@ -197,7 +201,10 @@ def create_newborn_record(data: NewbornRecordCreate, db: Session = Depends(get_d
 
     action = "Routine newborn care." if level == "Low" else "Monitor closely, provide supportive care, and consult a neonatologist."
 
+    patient_id = generate_patient_id(db, "Newborn")
+
     record = PatientRecord(
+        patient_id=patient_id,
         type="Newborn",
         name=data.baby_name,
         mother_name=data.mother_name or "N/A",
@@ -219,54 +226,27 @@ def create_newborn_record(data: NewbornRecordCreate, db: Session = Depends(get_d
 
     return {
         "id": record.id,
+        "patient_id": patient_id,
         "risk_level": level,
         "risk_factors": factors if factors else ["No major risk factors detected."],
         "recommended_action": action
     }
 
 
-# ---------- Get All Records ----------
 @app.get("/api/records")
 def get_all_records(db: Session = Depends(get_db)):
     records = db.query(PatientRecord).order_by(PatientRecord.created_at.desc()).all()
-    result = []
-    for r in records:
-        result.append({
-            "id": r.id,
-            "type": r.type,
-            "name": r.name,
-            "mother_name": r.mother_name,
-            "level": r.level,
-            "date": r.date,
-            "vitals": json.loads(r.vitals) if r.vitals else {},
-            "risk_factors": json.loads(r.risk_factors) if r.risk_factors else [],
-            "recommended_action": r.recommended_action,
-            "notes": r.notes,
-        })
-    return result
+    return [serialize(r) for r in records]
 
 
-# ---------- Get Single Record ----------
 @app.get("/api/records/{record_id}")
 def get_record(record_id: int, db: Session = Depends(get_db)):
     r = db.query(PatientRecord).filter(PatientRecord.id == record_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Record not found")
-    return {
-        "id": r.id,
-        "type": r.type,
-        "name": r.name,
-        "mother_name": r.mother_name,
-        "level": r.level,
-        "date": r.date,
-        "vitals": json.loads(r.vitals) if r.vitals else {},
-        "risk_factors": json.loads(r.risk_factors) if r.risk_factors else [],
-        "recommended_action": r.recommended_action,
-        "notes": r.notes,
-    }
+    return serialize(r)
 
 
-# ---------- Update Record ----------
 @app.put("/api/records/{record_id}")
 def update_record(record_id: int, data: RecordUpdate, db: Session = Depends(get_db)):
     r = db.query(PatientRecord).filter(PatientRecord.id == record_id).first()
@@ -283,7 +263,6 @@ def update_record(record_id: int, data: RecordUpdate, db: Session = Depends(get_
     return {"message": "Record updated", "id": r.id}
 
 
-# ---------- Delete Record ----------
 @app.delete("/api/records/{record_id}")
 def delete_record(record_id: int, db: Session = Depends(get_db)):
     r = db.query(PatientRecord).filter(PatientRecord.id == record_id).first()
@@ -294,7 +273,6 @@ def delete_record(record_id: int, db: Session = Depends(get_db)):
     return {"message": "Record deleted", "id": record_id}
 
 
-# ---------- Delete All Records ----------
 @app.delete("/api/records")
 def delete_all_records(db: Session = Depends(get_db)):
     db.query(PatientRecord).delete()

@@ -1,13 +1,9 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import os
 
-# Use environment variable for database URL (production), fall back to SQLite (local)
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./health.db")
-
-# SQLite needs special handling
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(DATABASE_URL, connect_args=connect_args, echo=False)
@@ -19,6 +15,7 @@ class PatientRecord(Base):
     __tablename__ = "records"
 
     id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(String, nullable=True, index=True)  # e.g. M-001, N-002
     type = Column(String, index=True)
     name = Column(String, index=True)
     mother_name = Column(String, nullable=True)
@@ -33,6 +30,21 @@ class PatientRecord(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+
+def generate_patient_id(db, record_type):
+    """Generate a patient ID like M-001, M-002, N-001, N-002."""
+    prefix = "M" if record_type == "Maternal" else "N"
+    # Count existing records of this type
+    count = db.query(PatientRecord).filter(PatientRecord.type == record_type).count()
+    next_num = count + 1
+    # Loop in case an ID already exists (safety)
+    while True:
+        candidate = f"{prefix}-{next_num:03d}"
+        exists = db.query(PatientRecord).filter(PatientRecord.patient_id == candidate).first()
+        if not exists:
+            return candidate
+        next_num += 1
 
 
 def get_db():
