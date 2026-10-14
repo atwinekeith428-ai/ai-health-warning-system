@@ -1,16 +1,20 @@
-// Auto-detect environment based on the browser's hostname
-// Local dev  → http://127.0.0.1:8000
-// Any deployed URL → Render backend
-const isLocalhost =
-  typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' ||
-   window.location.hostname === '127.0.0.1');
+// Detect if the app is running as an installed PWA
+const isStandalone = 
+  window.matchMedia('(display-mode: standalone)').matches ||
+  window.navigator.standalone === true;
 
-const API_BASE = isLocalhost
+// Detect if running on a real localhost dev server
+const isDevLocalhost = 
+  window.location.hostname === 'localhost' && 
+  !isStandalone;
+
+// Local dev → use local backend
+// Anything else (deployed OR installed PWA) → use live Render backend
+const API_BASE = isDevLocalhost
   ? 'http://127.0.0.1:8000'
   : 'https://ai-health-backend-1ebp.onrender.com';
 
-console.log('🔗 API Base URL:', API_BASE);
+console.log('🔗 API Base URL:', API_BASE, '| standalone:', isStandalone);
 
 export const api = {
   async getAllRecords() {

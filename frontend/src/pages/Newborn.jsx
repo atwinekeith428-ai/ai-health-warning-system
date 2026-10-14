@@ -8,8 +8,8 @@ export default function Newborn() {
   const [data, setData] = useState({
     baby_name: '',
     mother_name: '',
-    birth_weight: 2.4, temperature: 36.1, respiratory_rate: 68,
-    oxygen_saturation: 88, feeding: "Poor feeding"
+    birth_weight: 3.0, temperature: 37.0, respiratory_rate: 45,
+    oxygen_saturation: 97, feeding: "Good feeding"
   });
   const [result, setResult] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -61,10 +61,26 @@ export default function Newborn() {
                 <label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Mother's Name</label>
                 <input type="text" placeholder="e.g., Grace Akello" value={data.mother_name} onChange={(e) => setData({...data, mother_name: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm" />
               </div>
-              <div><label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Birth Weight (kg)</label><input type="number" step="0.1" value={data.birth_weight} onChange={(e) => setData({...data, birth_weight: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm" /></div>
-              <div><label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Temperature (°C)</label><input type="number" step="0.1" value={data.temperature} onChange={(e) => setData({...data, temperature: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm" /></div>
-              <div><label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Respiratory Rate (breaths/min)</label><input type="number" value={data.respiratory_rate} onChange={(e) => setData({...data, respiratory_rate: parseInt(e.target.value) || 0})} className="w-full p-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm" /></div>
-              <div><label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Oxygen Saturation (%)</label><input type="number" value={data.oxygen_saturation} onChange={(e) => setData({...data, oxygen_saturation: parseInt(e.target.value) || 0})} className="w-full p-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm" /></div>
+              <div>
+                <label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Birth Weight (kg)</label>
+                <input type="number" step="0.1" value={data.birth_weight} onChange={(e) => setData({...data, birth_weight: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm" />
+                <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">Normal: 2.5 - 4.0 kg</p>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Temperature (°C)</label>
+                <input type="number" step="0.1" value={data.temperature} onChange={(e) => setData({...data, temperature: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm" />
+                <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">Normal: 36.5 - 37.5°C</p>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Respiratory Rate (breaths/min)</label>
+                <input type="number" value={data.respiratory_rate} onChange={(e) => setData({...data, respiratory_rate: parseInt(e.target.value) || 0})} className="w-full p-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm" />
+                <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">Normal: 30 - 60</p>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Oxygen Saturation (%)</label>
+                <input type="number" value={data.oxygen_saturation} onChange={(e) => setData({...data, oxygen_saturation: parseInt(e.target.value) || 0})} className="w-full p-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm" />
+                <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">Normal: 95 - 100%</p>
+              </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Feeding Observation</label>
                 <select value={data.feeding} onChange={(e) => setData({...data, feeding: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg text-sm">
@@ -93,7 +109,7 @@ export default function Newborn() {
                 <span className="text-3xl">{styles(result.risk_level).icon}</span>
                 <h3 className={`text-2xl font-bold ${styles(result.risk_level).text}`}>{result.risk_level.toUpperCase()} RISK</h3>
               </div>
-              <p className="text-xs text-gray-700 dark:text-slate-300 mb-4">Assessment for <strong>{data.baby_name}</strong> shows signs that require closer monitoring.</p>
+              <p className="text-xs text-gray-700 dark:text-slate-300 mb-4">Assessment for <strong>{data.baby_name}</strong>.</p>
               <div className="mb-3">
                 <h4 className="font-semibold text-sm mb-1 text-slate-800 dark:text-white">Risk Factors Identified:</h4>
                 <ul className="list-disc list-inside text-xs text-gray-700 dark:text-slate-300 space-y-1">

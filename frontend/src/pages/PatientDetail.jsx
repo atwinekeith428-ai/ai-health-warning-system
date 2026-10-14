@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { api } from '../utils/api';
 
+// Convert Fahrenheit → Celsius
 const toCelsius = (f) => {
   const n = parseFloat(f);
   if (isNaN(n)) return f;
@@ -88,9 +89,14 @@ export default function PatientDetail() {
 
   const st = styles(record.level);
 
+  // Prepare vitals for display — convert body_temp/temperature to Celsius
   const displayVitals = record.vitals ? { ...record.vitals } : {};
   if (displayVitals.body_temp !== undefined) {
     displayVitals.body_temp = `${toCelsius(displayVitals.body_temp)}°C`;
+  }
+  // Newborn temperature is already in Celsius
+  if (displayVitals.temperature !== undefined && record.type === 'Newborn') {
+    displayVitals.temperature = `${displayVitals.temperature}°C`;
   }
 
   return (
