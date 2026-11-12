@@ -88,11 +88,13 @@ def analyze_maternal(data):
 
     risk_factors = []
 
+    # --- Blood pressure ---
     if data.systolic_bp >= 140 or data.diastolic_bp >= 90:
         risk_factors.append(f"High blood pressure ({data.systolic_bp}/{data.diastolic_bp} mmHg)")
     if data.systolic_bp < 90 or data.diastolic_bp < 60:
         risk_factors.append(f"Low blood pressure ({data.systolic_bp}/{data.diastolic_bp} mmHg)")
 
+    # --- Body temperature ---
     if body_temp_c >= 38.0:
         risk_factors.append(f"High fever ({body_temp_c:.1f}°C)")
     elif body_temp_c >= 37.6:
@@ -100,34 +102,54 @@ def analyze_maternal(data):
     elif body_temp_c < 36.0:
         risk_factors.append(f"Hypothermia - dangerously low temperature ({body_temp_c:.1f}°C)")
 
+    # --- Heart rate ---
     if data.heart_rate > 100:
         risk_factors.append(f"Increased pulse rate ({data.heart_rate} bpm)")
     if data.heart_rate < 60:
         risk_factors.append(f"Low pulse rate - bradycardia ({data.heart_rate} bpm)")
 
+    # --- Blood sugar ---
     if data.bs > 11:
         risk_factors.append(f"High blood sugar ({data.bs} mmol/L)")
     if data.bs < 4:
         risk_factors.append(f"Low blood sugar - hypoglycemia ({data.bs} mmol/L)")
 
-    if data.age >= 40:
-        risk_factors.append(f"Advanced maternal age ({data.age} years)")
-    if data.age <= 17:
+    # --- Age assessment (UPDATED THRESHOLDS) ---
+    # < 17        → HIGH (child/teen pregnancy)
+    # 18 - 40     → LOW (normal)
+    # 41 - 49     → MODERATE (advanced maternal age)
+    # >= 50       → HIGH (very advanced maternal age)
+    age_risk = "Low"
+    if data.age < 17:
+        risk_factors.append(f"CRITICAL - Very young maternal age ({data.age} years) - child pregnancy")
+        age_risk = "High"
+    elif data.age == 17:
         risk_factors.append(f"Young maternal age ({data.age} years)")
+        age_risk = "High"
+    elif data.age >= 50:
+        risk_factors.append(f"CRITICAL - Very advanced maternal age ({data.age} years)")
+        age_risk = "High"
+    elif data.age >= 41:
+        risk_factors.append(f"Advanced maternal age ({data.age} years)")
+        age_risk = "Moderate"
 
+    # --- Critical vitals override (includes extreme age) ---
     critical = (
         body_temp_c < 35.0 or body_temp_c >= 39.0 or
         data.systolic_bp >= 160 or data.systolic_bp < 80 or
         data.heart_rate >= 120 or data.heart_rate < 50 or
-        data.bs >= 15 or data.bs < 3
+        data.bs >= 15 or data.bs < 3 or
+        data.age < 17 or data.age >= 50
     )
 
     if critical:
         risk_level = "High Risk"
-        action = "CRITICAL: Seek immediate medical attention. Vitals indicate a life-threatening condition."
-    elif "high" in risk_level.lower():
+        action = "CRITICAL: Seek immediate medical attention. Vitals or age indicate a life-threatening condition."
+    elif age_risk == "High" or "high" in risk_level.lower():
+        risk_level = "High Risk"
         action = "Please consider further clinical evaluation and close monitoring. Refer to a healthcare professional immediately."
-    elif "mid" in risk_level.lower():
+    elif age_risk == "Moderate" or "mid" in risk_level.lower():
+        risk_level = "Mid Risk"
         action = "Monitor closely and follow up at the next visit."
     else:
         action = "Continue routine monitoring. No immediate action required."
@@ -140,11 +162,6 @@ def analyze_newborn(data):
     factors = []
 
     # === BIRTH WEIGHT (in kg) ===
-    # < 2.0 kg → HIGH (severe low birth weight / very premature)
-    # 2.0 - 2.4 kg → MODERATE (low birth weight)
-    # 2.5 - 4.0 kg → NORMAL (low risk)
-    # 4.1 - 6.9 kg → MODERATE (high birth weight / macrosomia)
-    # >= 7.0 kg → HIGH (severe macrosomia — likely error or serious condition)
     weight_risk = "Low"
     if data.birth_weight < 2.0:
         factors.append(f"Very low birth weight ({data.birth_weight} kg) - severe risk")
@@ -160,7 +177,6 @@ def analyze_newborn(data):
         weight_risk = "Moderate"
 
     # === TEMPERATURE (Celsius) ===
-    # Normal newborn: 36.5 - 37.5°C
     temp_risk = "Low"
     if data.temperature < 35.5:
         factors.append(f"Severe hypothermia ({data.temperature}°C)")
@@ -175,8 +191,7 @@ def analyze_newborn(data):
         factors.append(f"Elevated temperature ({data.temperature}°C)")
         temp_risk = "Moderate"
 
-    # === RESPIRATORY RATE (breaths/min) ===
-    # Normal newborn: 30-60 breaths/min
+    # === RESPIRATORY RATE ===
     resp_risk = "Low"
     if data.respiratory_rate > 80:
         factors.append(f"Severe tachypnea ({data.respiratory_rate} breaths/min)")
@@ -191,8 +206,7 @@ def analyze_newborn(data):
         factors.append(f"Decreased respiratory rate ({data.respiratory_rate} breaths/min)")
         resp_risk = "Moderate"
 
-    # === OXYGEN SATURATION (%) ===
-    # Normal: 95-100%
+    # === OXYGEN SATURATION ===
     o2_risk = "Low"
     if data.oxygen_saturation < 85:
         factors.append(f"CRITICAL oxygen saturation ({data.oxygen_saturation}%)")
@@ -207,8 +221,7 @@ def analyze_newborn(data):
         factors.append("Poor feeding observation")
         feed_risk = "Moderate"
 
-    # === DETERMINE OVERALL RISK ===
-    # If ANY category is HIGH → overall HIGH
+    # === OVERALL RISK ===
     if "High" in [weight_risk, temp_risk, resp_risk, o2_risk]:
         level = "High"
     elif "Moderate" in [weight_risk, temp_risk, resp_risk, o2_risk, feed_risk]:
@@ -216,7 +229,6 @@ def analyze_newborn(data):
     else:
         level = "Low"
 
-    # Recommended actions
     if level == "High":
         action = "CRITICAL: Immediate neonatal evaluation required. Consult a neonatologist urgently."
     elif level == "Moderate":
