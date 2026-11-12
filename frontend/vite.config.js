@@ -7,6 +7,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      strategies: 'generateSW',
       includeAssets: ['maternova-logo.png'],
       manifest: {
         name: 'Maternova - AI Health Monitoring',
@@ -41,6 +43,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg}'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/, /sw\.js/, /workbox-/, /manifest\.webmanifest/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/ai-health-backend-1ebp\.onrender\.com\/.*/i,
