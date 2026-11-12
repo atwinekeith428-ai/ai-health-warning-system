@@ -1,5 +1,8 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!sw\\.js|workbox-.*\\.js|manifest\\.webmanifest|registerSW\\.js|maternova-logo\\.png|.*\\.js$|.*\\.css$|.*\\.png$|.*\\.svg$).*)",
+      "destination": "/index.html"
+    }
   ]
 }
